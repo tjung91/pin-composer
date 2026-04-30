@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pin Composer">
+<meta name="theme-color" content="#1C3A2F">
+<title>Pin Composer · The Herinian</title>
+<style>
+:root {
+  --forest: #1C3A2F;
+  --terra: #C85D35;
+  --cream: #F7F3EE;
+  --dk: #EDE7DF;
+  --gold: #C4A97D;
+  --muted: #8A9E95;
+  --dark: #0F2B1A;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: -apple-system, 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--forest);
+  padding-bottom: calc(80px + var(--safe-bottom));
+}
+input, textarea, select, button { font-family: inherit; }
+textarea { resize: none; }
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%231C3A2F' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* ── Header ── */
+#header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--forest);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#header h1 { font-family: Georgia, serif; font-size: 17px; color: var(--cream); font-weight: 700; }
+#header p  { font-size: 9px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-top: 1px; }
+#header-dl {
+  background: var(--terra); color: white; border: none;
+  border-radius: 10px; padding: 9px 16px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Sections ── */
+.section { padding: 16px 16px 0; }
+.section-title {
+  font-size: 10px; font-weight: 700; color: var(--forest);
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px;
+}
+
+/* ── Layout picker ── */
+#layout-scroll {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
+}
+#layout-scroll::-webkit-scrollbar { display: none; }
+.layout-btn {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 10px; border-radius: 12px;
+  border: 2px solid var(--dk); background: white; cursor: pointer;
+  min-width: 58px;
+}
+.layout-btn.active { border-color: var(--terra); background: #FDF5F0; }
+.layout-btn .lname { font-size: 9px; font-weight: 700; color: var(--forest); white-space: nowrap; }
+.licon { display: flex; gap: 2px; }
+.lblock { background: var(--forest); border-radius: 2px; }
+
+/* ── Photo slots ── */
+#slots-scroll {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none; align-items: center;
+}
+#slots-scroll::-webkit-scrollbar { display: none; }
+.slot-thumb {
+  flex-shrink: 0; width: 64px; height: 64px; border-radius: 12px;
+  border: 2.5px solid var(--dk); background: #f0ede8;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; overflow: hidden; position: relative;
+  transition: border-color .15s;
+}
+.slot-thumb.active { border-color: var(--terra); box-shadow: 0 0 0 3px rgba(200,93,53,0.2); }
+.slot-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slot-thumb .snum { font-size: 13px; font-weight: 700; color: var(--muted); }
+.slot-del {
+  position: absolute; top: 3px; right: 3px;
+  background: rgba(0,0,0,0.6); color: white; border: none;
+  border-radius: 50%; width: 20px; height: 20px;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.add-slot-btn {
+  flex-shrink: 0; width: 64px; height: 64px; border-radius: 12px;
+  border: 2px dashed var(--muted); background: white;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  cursor: pointer; color: var(--muted); font-size: 10px; font-weight: 600;
+}
+.add-slot-btn span { font-size: 20px; }
+
+/* ── Canvas ── */
+#canvas-section { padding: 16px; }
+#canvas-wrap {
+  position: relative; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+#pin-canvas { width: 100%; display: block; touch-action: none; }
+#slot-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 14px; }
+#drag-hint {
+  text-align: center; font-size: 11px; color: var(--muted);
+  margin-top: 8px; padding: 0 4px;
+}
+#drag-hint.active { color: var(--terra); font-weight: 600; }
+
+/* ── Accordion ── */
+details { background: white; border-radius: 14px; border: 1px solid var(--dk); overflow: hidden; }
+details + details { margin-top: 10px; }
+summary {
+  padding: 14px 16px; font-size: 13px; font-weight: 700;
+  list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  color: var(--forest);
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "›"; font-size: 18px; color: var(--muted); transform: rotate(90deg); display: inline-block; transition: transform .2s; }
+details[open] summary::after { transform: rotate(270deg); }
+.accordion-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Text inputs ── */
+.field-label { font-size: 10px; font-weight: 700; color: var(--forest); letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+input[type=text], textarea, select {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid var(--dk); background: #FAFAF8;
+  font-size: 15px; color: var(--forest); outline: none;
+}
+input[type=text]:focus, textarea:focus, select:focus { border-color: var(--terra); }
+
+/* ── Template grid ── */
+#tpl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tpl-btn {
+  padding: 10px 6px; border-radius: 10px;
+  border: 2px solid var(--dk); background: white; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.tpl-btn.active { border-color: var(--terra); background: #FDF5F0; }
+.tpl-btn .icon { font-size: 20px; }
+.tpl-btn .name { font-size: 9px; font-weight: 700; }
+
+/* ── Overlay toggle ── */
+.row { display: flex; align-items: center; justify-content: space-between; }
+.toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; inset: 0; background: var(--dk); border-radius: 34px;
+  cursor: pointer; transition: .3s;
+}
+.slider:before {
+  content: ""; position: absolute; height: 18px; width: 18px;
+  left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+input:checked + .slider { background: var(--terra); }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* ── Tags ── */
+#tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  padding: 5px 10px; border-radius: 20px; background: var(--cream);
+  color: var(--forest); font-size: 12px; cursor: pointer;
+  border: 1px solid var(--dk); transition: background .15s;
+}
+.tag.copied, .tag:active { background: var(--forest); color: white; }
+#copy-all-btn {
+  padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--terra);
+  background: transparent; color: var(--terra); font-size: 11px; font-weight: 700; cursor: pointer;
+}
+
+/* ── List rows ── */
+.list-row { padding-bottom: 10px; border-bottom: 1px solid var(--dk); }
+.list-row:last-child { border-bottom: none; padding-bottom: 0; }
+.list-num { font-size: 10px; color: var(--gold); font-weight: 700; margin-bottom: 4px; }
+
+/* ── Bottom bar ── */
+#bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--forest);
+  padding: 12px 16px calc(var(--safe-bottom) + 12px);
+  display: flex; gap: 10px;
+}
+#dl-btn {
+  flex: 1; padding: 14px; border: none; border-radius: 12px;
+  background: var(--terra); color: white;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  letter-spacing: .02em;
+}
+#hint-btn {
+  padding: 14px 16px; border: 2px solid rgba(255,255,255,0.2); border-radius: 12px;
+  background: transparent; color: rgba(255,255,255,0.7);
+  font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+
+/* ── Install hint ── */
+#install-hint {
+  margin: 16px; padding: 12px 14px; background: white;
+  border-radius: 12px; border: 1px solid var(--dk);
+  font-size: 12px; color: var(--muted); line-height: 1.6; display: none;
+}
+#install-hint strong { color: var(--forest); }
+#install-hint .close-hint {
+  float: right; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; margin-top: -2px;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div>
+    <h1>The Herinian</h1>
+    <p>Pin Composer</p>
+  </div>
+  <button id="header-dl" onclick="downloadPin()">⬇ 저장</button>
+</div>
+
+<!-- Install hint -->
+<div id="install-hint">
+  <button class="close-hint" onclick="this.parentElement.style.display='none'">✕</button>
+  <strong>📱 홈 화면에 추가하는 방법</strong><br>
+  Safari 하단 공유 버튼 → <strong>"홈 화면에 추가"</strong> 탭 → 추가<br>
+  그러면 앱 아이콘이 생겨요!
+</div>
+
+<!-- Layout picker -->
+<div class="section">
+  <div class="section-title">레이아웃</div>
+  <div id="layout-scroll"></div>
+</div>
+
+<!-- Photo slots -->
+<div class="section" style="margin-top:16px">
+  <div class="section-title">사진 슬롯</div>
+  <div id="slots-scroll"></div>
+</div>
+
+<!-- Canvas preview -->
+<div id="canvas-section">
+  <div id="canvas-wrap">
+    <canvas id="pin-canvas" width="1000" height="1500"></canvas>
+    <canvas id="slot-overlay" width="1000" height="1500"></canvas>
+  </div>
+  <div id="drag-hint">슬롯 선택 후 캔버스를 드래그하면 사진 위치가 조정돼요</div>
+</div>
+
+<!-- Accordions -->
+<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px;">
+
+  <!-- Text -->
+  <details open>
+    <summary>✏️ 텍스트</summary>
+    <div class="accordion-body">
+      <div class="row" style="margin-bottom:4px">
+        <span class="field-label" style="margin:0">텍스트 오버레이</span>
+        <label class="toggle"><input type="checkbox" id="overlay-toggle" checked onchange="redraw()"><span class="slider"></span></label>
+      </div>
+      <div>
+        <label class="field-label">헤드라인</label>
+        <textarea id="hl-input" rows="2" placeholder="South Island Road Trip" oninput="redraw()"></textarea>
+      </div>
+      <div id="sl-wrap">
+        <label class="field-label">서브라인 <span style="font-weight:400;opacity:.5">(선택)</span></label>
+        <input type="text" id="sl-input" placeholder="The complete guide" oninput="redraw()">
+      </div>
+    </div>
+  </details>
+
+  <!-- Template -->
+  <details>
+    <summary>🎨 템플릿</summary>
+    <div class="accordion-body">
+      <div id="tpl-grid"></div>
+      <div id="tpl-hint" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+  </details>
+
+  <!-- Category -->
+  <details>
+    <summary>📍 카테고리</summary>
+    <div class="accordion-body">
+      <select id="cat-select" onchange="state.cat=this.value;redraw()"></select>
+    </div>
+  </details>
+
+  <!-- Tags -->
+  <details>
+    <summary>#️⃣ 태그</summary>
+    <div class="accordion-body">
+      <div class="row">
+        <span style="font-size:12px;color:var(--muted)">탭하면 복사</span>
+        <button id="copy-all-btn" onclick="copyAllTags()">전체 복사</button>
+      </div>
+      <div id="tags-wrap"></div>
+    </div>
+  </details>
+
+  <!-- List items -->
+  <details id="list-panel" style="display:none">
+    <summary>📋 리스트 항목</summary>
+    <div class="accordion-body" id="list-rows"></div>
+  </details>
+
+</div>
+
+<!-- Bottom bar -->
+<div id="bottom-bar">
+  <button id="dl-btn" onclick="downloadPin()">⬇ PNG 저장</button>
+  <button id="hint-btn" onclick="showInstallHint()">📱 앱으로 추가</button>
+</div>
+
+<!-- File input -->
+<input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
+
+<script>
+/* ═══════════ PWA SETUP ═══════════ */
+// Generate app icon
+function makeIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  x.fillStyle = '#1C3A2F'; x.fillRect(0,0,size,size);
+  x.fillStyle = '#C4A97D'; x.font = `bold ${size*0.52}px Georgia,serif`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('H', size/2, size*0.52);
+  return c.toDataURL('image/png');
+}
+const icon192 = makeIcon(192);
+const icon512 = makeIcon(512);
+
+// Apple touch icon
+const touchIcon = document.createElement('link');
+touchIcon.rel = 'apple-touch-icon'; touchIcon.href = icon192;
+document.head.appendChild(touchIcon);
+
+// Manifest
+const manifest = {
+  name: "The Herinian · Pin Composer",
+  short_name: "Pin Composer",
+  description: "Pinterest pin creator for The Herinian travel blog",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#1C3A2F",
+  theme_color: "#1C3A2F",
+  orientation: "portrait",
+  icons: [
+    {src: icon192, sizes:"192x192", type:"image/png"},
+    {src: icon512, sizes:"512x512", type:"image/png"}
+  ]
+};
+const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const mLink = document.createElement('link');
+mLink.rel = 'manifest'; mLink.href = URL.createObjectURL(mBlob);
+document.head.appendChild(mLink);
+
+// Service worker (for when hosted on a server)
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const sw = `
+    const CACHE = 'herinian-pins-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      })));
+    });
+  `;
+  const swBlob = new Blob([sw], {type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+}
+
+function showInstallHint() {
+  const el = document.getElementById('install-hint');
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth'});
+}
+
+/* ═══════════ DATA ═══════════ */
+const LAYOUTS = {
+  single: { name:"1장",  slots:[{x:0,y:0,w:1000,h:1500}] },
+  v2:     { name:"상하2", slots:[{x:0,y:0,w:1000,h:750},{x:0,y:752,w:1000,h:748}] },
+  h2:     { name:"좌우2", slots:[{x:0,y:0,w:499,h:1500},{x:501,y:0,w:499,h:1500}] },
+  "3t":   { name:"3 상1", slots:[{x:0,y:0,w:1000,h:900},{x:0,y:902,w:499,h:598},{x:501,y:902,w:499,h:598}] },
+  "3l":   { name:"3 좌1", slots:[{x:0,y:0,w:600,h:1500},{x:602,y:0,w:398,h:749},{x:602,y:751,w:398,h:749}] },
+  "4g":   { name:"4분할", slots:[{x:0,y:0,w:499,h:749},{x:501,y:0,w:499,h:749},{x:0,y:751,w:499,h:749},{x:501,y:751,w:499,h:749}] },
+};
+const LAYOUT_ICONS = {
+  single: `<div style="width:28px;height:40px;background:#1C3A2F;border-radius:3px"></div>`,
+  v2:     `<div style="width:28px;height:40px;display:flex;flex-direction:column;gap:2px"><div style="flex:1;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;background:#1C3A2F;border-radius:2px"></div></div>`,
+  h2:     `<div style="width:28px;height:40px;display:flex;gap:2px"><div style="flex:1;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;background:#1C3A2F;border-radius:2px"></div></div>`,
+  "3t":   `<div style="width:28px;height:40px;display:flex;flex-direction:column;gap:2px"><div style="flex:1.5;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;display:flex;gap:2px"><div style="flex:1;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;background:#1C3A2F;border-radius:2px"></div></div></div>`,
+  "3l":   `<div style="width:28px;height:40px;display:flex;gap:2px"><div style="flex:1.5;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="flex:1;background:#1C3A2F;border-radius:2px"></div><div style="flex:1;background:#1C3A2F;border-radius:2px"></div></div></div>`,
+  "4g":   `<div style="width:28px;height:40px;display:grid;grid-template-columns:1fr 1fr;gap:2px"><div style="background:#1C3A2F;border-radius:2px"></div><div style="background:#1C3A2F;border-radius:2px"></div><div style="background:#1C3A2F;border-radius:2px"></div><div style="background:#1C3A2F;border-radius:2px"></div></div>`,
+};
+
+const TEMPLATES = [
+  {id:"bold",     name:"Bold",      icon:"💥", hint:"짧고 강렬한 제목"},
+  {id:"elegant",  name:"Elegant",   icon:"✨", hint:"장소명 + 서브라인"},
+  {id:"editorial",name:"Editorial", icon:"🎨", hint:"미니멀 브랜드"},
+  {id:"number",   name:"Number",    icon:"🔢", hint:"숫자 강조형"},
+  {id:"split",    name:"Split",     icon:"📐", hint:"하단 텍스트바"},
+  {id:"list",     name:"List",      icon:"📋", hint:"리스트형"},
+];
+const CATS = ["New Zealand","Christchurch","South Island","Auckland","Campervan","Korea · Seoul","Korea · Food","Bali & Gili","Australia","Smart Tips","Budget Hacks"];
+const TAGS = ["newzealand","travel","nztourism","theherinian","southisland","travelblog","nz","roadtrip","nztravel","visitnz"];
+const DEFAULT_LIST = [
+  {title:"Milford Sound",  desc:"Most dramatic fiord in NZ"},
+  {title:"Lake Tekapo",    desc:"Stargazing & turquoise water"},
+  {title:"Queenstown",     desc:"Adventure capital of world"},
+  {title:"Franz Josef",    desc:"Walk on ancient ice"},
+  {title:"Abel Tasman",    desc:"Golden beaches & clear sea"},
+];
+
+const W=1000, H=1500;
+const SERIF="'Cormorant Garamond',Georgia,serif", SANS="-apple-system,'DM Sans',sans-serif";
+const B={forest:"#1C3A2F",terra:"#C85D35",cream:"#F7F3EE",dk:"#EDE7DF",gold:"#C4A97D",dark:"#0F2B1A"};
+
+const state = {
+  layout:"single", photos:Array(4).fill(null), activeSlot:0,
+  tpl:"bold", cat:CATS[0], listItems:DEFAULT_LIST.map(x=>({...x})),
+  fontOk:false,
+  dragging:false, dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
+};
+
+const canvas = document.getElementById("pin-canvas");
+const ovCanvas = document.getElementById("slot-overlay");
+const ctx = canvas.getContext("2d");
+const octx = ovCanvas.getContext("2d");
+let nextSlot = 0;
+
+/* ═══════════ FONTS ═══════════ */
+Promise.all([
+  new FontFace("Cormorant Garamond","url(https://fonts.gstatic.com/s/cormorantgaramond/v16/co3YmX5slCNuHLi8bLeY9MK7whWMhyjQEl5fsA.woff2)",{weight:"400",style:"normal"}),
+  new FontFace("Cormorant Garamond","url(https://fonts.gstatic.com/s/cormorantgaramond/v16/co3bmX5slCNuHLi8bLeY9MK7whWMhyjYrEtE28ce.woff2)",{weight:"400",style:"italic"}),
+  new FontFace("DM Sans","url(https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHTWEBlw.woff2)",{weight:"400 800"}),
+].map(f=>f.load().then(l=>document.fonts.add(l)))).then(()=>{state.fontOk=true;redraw();}).catch(()=>{state.fontOk=true;redraw();});
+
+/* ═══════════ CANVAS HELPERS ═══════════ */
+function wrap(c,text,maxW){
+  if(!text)return[""];const words=text.split(" ");let lines=[],line="";
+  for(const w of words){const t=line?line+" "+w:w;if(c.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;}
+  if(line)lines.push(line);return lines;
+}
+function sha(c,b,a){c.shadowColor=`rgba(0,0,0,${a||.6})`;c.shadowBlur=b||20;c.shadowOffsetX=2;c.shadowOffsetY=2;}
+function nosh(c){c.shadowColor="transparent";c.shadowBlur=0;c.shadowOffsetX=0;c.shadowOffsetY=0;}
+function wm(c){nosh(c);c.textAlign="center";c.font="500 20px "+SANS;c.fillStyle="rgba(255,255,255,0.5)";c.fillText("theherinian.com",W/2,H-36);}
+
+function drawSlot(slot, photo) {
+  if (!photo?.img) {
+    ctx.fillStyle="#2D4A3E";ctx.fillRect(slot.x,slot.y,slot.w,slot.h);
+    ctx.fillStyle="rgba(255,255,255,0.12)";ctx.font="bold 40px "+SANS;
+    ctx.textAlign="center";ctx.fillText("+",(slot.x+slot.w/2),(slot.y+slot.h/2+14));
+    return;
+  }
+  const img=photo.img, ir=img.width/img.height, sr=slot.w/slot.h;
+  const sc = ir>sr ? slot.h/img.height : slot.w/img.width;
+  const sw=img.width*sc, sh=img.height*sc;
+  const mox=Math.max(0,(sw-slot.w)/2), moy=Math.max(0,(sh-slot.h)/2);
+  const ox=Math.max(-mox,Math.min(mox,photo.offsetX||0));
+  const oy=Math.max(-moy,Math.min(moy,photo.offsetY||0));
+  ctx.save();ctx.beginPath();ctx.rect(slot.x,slot.y,slot.w,slot.h);ctx.clip();
+  ctx.drawImage(img, slot.x+(slot.w-sw)/2+ox, slot.y+(slot.h-sh)/2+oy, sw, sh);
+  ctx.restore();
+}
+
+/* ═══════════ REDRAW ═══════════ */
+function redraw() {
+  canvas.width=W; canvas.height=H;
+  const slots=LAYOUTS[state.layout].slots;
+  const hl=document.getElementById("hl-input").value||"";
+  const sl=document.getElementById("sl-input").value||"";
+  const showOv=document.getElementById("overlay-toggle").checked;
+
+  slots.forEach((slot,i) => drawSlot(slot, state.photos[i]));
+
+  // Gap lines
+  ctx.fillStyle="#F7F3EE";
+  if(state.layout==="v2") ctx.fillRect(0,750,W,2);
+  if(state.layout==="h2") ctx.fillRect(499,0,2,H);
+  if(state.layout==="3t"){ctx.fillRect(0,900,W,2);ctx.fillRect(499,900,2,H-900);}
+  if(state.layout==="3l"){ctx.fillRect(600,0,2,H);ctx.fillRect(600,749,W-600,2);}
+  if(state.layout==="4g"){ctx.fillRect(499,0,2,H);ctx.fillRect(0,749,W,2);}
+
+  if (showOv && hl) renderOverlay(state.tpl, hl, sl, state.cat, state.listItems);
+  drawSlotHighlight();
+}
+
+function renderOverlay(tplId, hl, sl, cat, list) {
+  const P=56;
+  if(tplId==="bold"){
+    const g=ctx.createRadialGradient(W/2,H/2,200,W/2,H/2,900);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,0.38)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.textAlign="left";sha(ctx,30,0.7);ctx.font="800 88px "+SANS;ctx.fillStyle="#fff";
+    const lines=wrap(ctx,hl.toUpperCase(),W-P*2);const sy=(H-lines.length*100)/2+30;
+    lines.forEach((l,i)=>ctx.fillText(l,P,sy+i*100));
+    if(sl){ctx.font="500 28px "+SANS;ctx.fillStyle="rgba(255,255,255,0.85)";sha(ctx,16,0.5);ctx.fillText(sl.toUpperCase(),P,sy+lines.length*100+24);}
+    wm(ctx);
+  } else if(tplId==="elegant"){
+    ctx.fillStyle="rgba(0,0,0,0.18)";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";sha(ctx,24,0.6);ctx.font="italic 400 72px "+SERIF;ctx.fillStyle="#fff";ctx.fillText(cat,W/2,H*0.32);
+    ctx.font="600 30px "+SANS;ctx.fillStyle="rgba(255,255,255,0.9)";sha(ctx,18,0.5);
+    const slL=wrap(ctx,sl||hl,W-P*2);slL.forEach((l,i)=>ctx.fillText(l,W/2,H*0.32+60+i*40));
+    if(sl&&hl!==sl){ctx.font="700 36px "+SANS;ctx.fillStyle="rgba(255,255,255,0.7)";wrap(ctx,hl,W-P*2).forEach((l,i)=>ctx.fillText(l,W/2,H*0.32+60+slL.length*40+34+i*44));}
+    wm(ctx);
+  } else if(tplId==="editorial"){
+    ctx.fillStyle="rgba(0,0,0,0.15)";ctx.fillRect(0,0,W,H);ctx.textAlign="center";
+    ctx.font="700 32px "+SERIF;ctx.fillStyle="rgba(255,255,255,0.85)";sha(ctx,12,0.4);ctx.fillText("The Herinian",W/2,70);
+    ctx.font="400 16px "+SANS;ctx.fillStyle="rgba(255,255,255,0.5)";nosh(ctx);ctx.fillText("Journey Smarter. Live Deeper.",W/2,98);
+    ctx.font="400 34px "+SERIF;ctx.fillStyle="rgba(255,255,255,0.9)";sha(ctx,16,0.5);
+    const hL=wrap(ctx,hl,W-P*2);const mY=H*0.42;hL.forEach((l,i)=>ctx.fillText(l,W/2,mY+i*48));
+    if(sl){ctx.font="italic 400 28px "+SERIF;ctx.fillStyle="rgba(255,255,255,0.65)";ctx.fillText(sl,W/2,mY+hL.length*48+26);}
+    wm(ctx);
+  } else if(tplId==="number"){
+    const g=ctx.createRadialGradient(W/2,H/2,100,W/2,H/2,800);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,0.3)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    const num=(hl.match(/\d+/)||[""])[0],rest=hl.replace(/^\d+\s*/,"").toUpperCase();
+    ctx.textAlign="left";sha(ctx,30,0.7);
+    if(num){
+      ctx.font="800 220px "+SANS;ctx.fillStyle="#fff";ctx.fillText(num,P,H*0.42);
+      const nW=ctx.measureText(num).width;ctx.font="800 52px "+SANS;
+      const rL=wrap(ctx,rest,W-P-nW-30);
+      if(rL.length<=3&&nW<W*0.4)rL.forEach((l,i)=>ctx.fillText(l,P+nW+20,H*0.42-100+i*60));
+      else wrap(ctx,rest,W-P*2).forEach((l,i)=>ctx.fillText(l,P,H*0.42+60+i*60));
+    } else {ctx.font="800 72px "+SANS;ctx.fillStyle="#fff";wrap(ctx,hl.toUpperCase(),W-P*2).forEach((l,i)=>ctx.fillText(l,P,H*0.4+i*84));}
+    if(sl){ctx.font="800 56px "+SANS;ctx.fillStyle="#fff";ctx.textAlign="left";ctx.fillText(sl.toUpperCase(),P,H-90);}
+    wm(ctx);
+  } else if(tplId==="split"){
+    ctx.fillStyle="rgba(15,43,26,0.82)";ctx.fillRect(0,H-280,W,280);ctx.textAlign="center";
+    ctx.font="400 42px "+SERIF;ctx.fillStyle="#fff";sha(ctx,10,0.4);
+    wrap(ctx,hl,W-120).forEach((l,i)=>ctx.fillText(l,W/2,H-200+i*52));
+    if(sl){ctx.font="400 24px "+SANS;ctx.fillStyle="rgba(255,255,255,0.7)";nosh(ctx);ctx.fillText(sl,W/2,H-100);}
+    ctx.font="500 18px "+SANS;ctx.fillStyle="rgba(255,255,255,0.4)";ctx.fillText("theherinian.com",W/2,H-50);
+  } else if(tplId==="list"){
+    ctx.fillStyle="rgba(15,43,26,0.88)";ctx.fillRect(0,H*0.45,W,H*0.55);
+    ctx.textAlign="left";
+    ctx.font="600 16px "+SANS;ctx.fillStyle=B.gold;ctx.fillText(cat.toUpperCase(),P,H*0.45+48);
+    ctx.font="800 48px "+SANS;ctx.fillStyle="#fff";
+    const hL3=wrap(ctx,hl.toUpperCase(),W-P*2);hL3.forEach((l,i)=>ctx.fillText(l,P,H*0.45+100+i*58));
+    let iy=H*0.45+100+hL3.length*58+24;
+    list.slice(0,4).forEach((item,idx)=>{
+      if(iy>H-80)return;
+      ctx.fillStyle="rgba(196,169,125,0.2)";ctx.beginPath();ctx.roundRect(P,iy,46,46,10);ctx.fill();
+      ctx.font="700 22px "+SERIF;ctx.fillStyle=B.gold;ctx.textAlign="center";ctx.fillText(String(idx+1),P+23,iy+31);ctx.textAlign="left";
+      ctx.font="600 20px "+SANS;ctx.fillStyle="#fff";ctx.fillText(item.title||"",P+62,iy+20);
+      ctx.font="400 15px "+SANS;ctx.fillStyle="#7A9A80";ctx.fillText(item.desc||"",P+62,iy+42);iy+=72;
+    });
+    ctx.font="600 14px "+SANS;ctx.fillStyle=B.gold;ctx.textAlign="left";ctx.fillText("theherinian.com",P,H-36);
+  }
+}
+
+function drawSlotHighlight() {
+  ovCanvas.width=W; ovCanvas.height=H;
+  const slot=LAYOUTS[state.layout].slots[state.activeSlot];
+  if(!slot)return;
+  octx.clearRect(0,0,W,H);
+  octx.strokeStyle="#C85D35"; octx.lineWidth=10;
+  octx.strokeRect(slot.x+5,slot.y+5,slot.w-10,slot.h-10);
+  octx.fillStyle="rgba(200,93,53,0.9)";
+  const lw=100,lh=30;octx.fillRect(slot.x,slot.y,lw,lh);
+  octx.font="bold 16px "+SANS; octx.fillStyle="white"; octx.textAlign="left";
+  octx.fillText("슬롯 "+(state.activeSlot+1), slot.x+8, slot.y+21);
+}
+
+/* ═══════════ DRAG ═══════════ */
+function toCanvasPos(clientX, clientY) {
+  const r=canvas.getBoundingClientRect();
+  return {x:(clientX-r.left)*(W/r.width), y:(clientY-r.top)*(H/r.height)};
+}
+function hitSlot(cx,cy) {
+  const slots=LAYOUTS[state.layout].slots;
+  for(let i=0;i<slots.length;i++){const s=slots[i];if(cx>=s.x&&cx<s.x+s.w&&cy>=s.y&&cy<s.y+s.h)return i;}
+  return -1;
+}
+function startDrag(clientX, clientY) {
+  const {x,y}=toCanvasPos(clientX,clientY);
+  const idx=hitSlot(x,y); if(idx<0)return;
+  state.activeSlot=idx; state.dragging=true;
+  state.dragStartX=clientX; state.dragStartY=clientY;
+  const p=state.photos[idx];
+  state.dragStartOffX=p?(p.offsetX||0):0; state.dragStartOffY=p?(p.offsetY||0):0;
+  buildSlotsUI(); drawSlotHighlight();
+  document.getElementById("drag-hint").className="drag-hint active";
+  document.getElementById("drag-hint").textContent="슬롯 "+(idx+1)+" 조정 중 · 손가락을 놓으면 확정";
+}
+function moveDrag(clientX, clientY) {
+  if(!state.dragging)return;
+  const r=canvas.getBoundingClientRect(); const sc=W/r.width;
+  const dx=(clientX-state.dragStartX)*sc, dy=(clientY-state.dragStartY)*sc;
+  const p=state.photos[state.activeSlot]; if(!p?.img)return;
+  const slot=LAYOUTS[state.layout].slots[state.activeSlot];
+  const ir=p.img.width/p.img.height,sr=slot.w/slot.h;
+  const sc2=ir>sr?slot.h/p.img.height:slot.w/p.img.width;
+  const mox=Math.max(0,(p.img.width*sc2-slot.w)/2);
+  const moy=Math.max(0,(p.img.height*sc2-slot.h)/2);
+  p.offsetX=Math.max(-mox,Math.min(mox,state.dragStartOffX+dx));
+  p.offsetY=Math.max(-moy,Math.min(moy,state.dragStartOffY+dy));
+  redraw();
+}
+function endDrag() {
+  state.dragging=false;
+  document.getElementById("drag-hint").className="";
+  document.getElementById("drag-hint").textContent="슬롯 선택 후 캔버스를 드래그하면 사진 위치가 조정돼요";
+}
+
+canvas.addEventListener("mousedown",e=>{startDrag(e.clientX,e.clientY);e.preventDefault();});
+document.addEventListener("mousemove",e=>{moveDrag(e.clientX,e.clientY);});
+document.addEventListener("mouseup",endDrag);
+canvas.addEventListener("touchstart",e=>{e.preventDefault();const t=e.touches[0];startDrag(t.clientX,t.clientY);},{passive:false});
+document.addEventListener("touchmove",e=>{if(state.dragging){e.preventDefault();const t=e.touches[0];moveDrag(t.clientX,t.clientY);}},{passive:false});
+document.addEventListener("touchend",endDrag);
+
+/* ═══════════ FILE HANDLING ═══════════ */
+function handleFiles(files) {
+  const slotCount=LAYOUTS[state.layout].slots.length;
+  let slot=nextSlot;
+  Array.from(files).forEach(file => {
+    if(!file.type.startsWith("image/")||slot>=slotCount)return;
+    const url=URL.createObjectURL(file);
+    const im=new Image();
+    const s=slot;
+    im.onload=()=>{state.photos[s]={img:im,url,offsetX:0,offsetY:0};buildSlotsUI();redraw();};
+    im.src=url; slot++;
+  });
+  document.getElementById("file-input").value="";
+}
+
+function uploadToSlot(idx) {
+  nextSlot=idx; state.activeSlot=idx;
+  buildSlotsUI(); drawSlotHighlight();
+  document.getElementById("file-input").click();
+}
+function removeFromSlot(idx) { state.photos[idx]=null; buildSlotsUI(); redraw(); }
+
+/* ═══════════ LAYOUT ═══════════ */
+function setLayout(id) {
+  state.layout=id; state.activeSlot=0;
+  buildLayoutPicker(); buildSlotsUI(); drawSlotHighlight(); redraw();
+}
+
+function buildLayoutPicker() {
+  const wrap=document.getElementById("layout-scroll"); wrap.innerHTML="";
+  Object.entries(LAYOUTS).forEach(([id,L])=>{
+    const btn=document.createElement("button");
+    btn.className="layout-btn"+(id===state.layout?" active":"");
+    btn.innerHTML=`${LAYOUT_ICONS[id]}<div class="lname">${L.name}</div>`;
+    btn.onclick=()=>setLayout(id);
+    wrap.appendChild(btn);
+  });
+}
+
+function buildSlotsUI() {
+  const slots=LAYOUTS[state.layout].slots;
+  const wrap=document.getElementById("slots-scroll"); wrap.innerHTML="";
+  slots.forEach((slot,i)=>{
+    const photo=state.photos[i];
+    const div=document.createElement("div");
+    div.className="slot-thumb"+(i===state.activeSlot?" active":"");
+    div.onclick=()=>{state.activeSlot=i;buildSlotsUI();drawSlotHighlight();};
+    if(photo){
+      div.innerHTML=`<img src="${photo.url}" alt="">`;
+      const del=document.createElement("button");del.className="slot-del";del.textContent="✕";
+      del.onclick=e=>{e.stopPropagation();removeFromSlot(i);};
+      div.appendChild(del);
+    } else {
+      div.innerHTML=`<span class="snum">${i+1}</span>`;
+    }
+    wrap.appendChild(div);
+  });
+  // Add button
+  const addBtn=document.createElement("div");addBtn.className="add-slot-btn";
+  addBtn.innerHTML=`<span>📸</span><span>추가</span>`;
+  addBtn.onclick=()=>{
+    nextSlot=0;
+    const slotCount=LAYOUTS[state.layout].slots.length;
+    for(let i=0;i<slotCount;i++){if(!state.photos[i]){nextSlot=i;break;}}
+    document.getElementById("file-input").click();
+  };
+  wrap.appendChild(addBtn);
+}
+
+function buildTplGrid() {
+  const grid=document.getElementById("tpl-grid"); grid.innerHTML="";
+  TEMPLATES.forEach(t=>{
+    const btn=document.createElement("button");
+    btn.className="tpl-btn"+(t.id===state.tpl?" active":"");
+    btn.innerHTML=`<span class="icon">${t.icon}</span><span class="name">${t.name}</span>`;
+    btn.onclick=()=>{
+      state.tpl=t.id; buildTplGrid();
+      document.getElementById("sl-wrap").style.display=t.id==="list"?"none":"block";
+      document.getElementById("list-panel").style.display=t.id==="list"?"block":"none";
+      document.getElementById("tpl-hint").textContent="💡 "+t.hint;
+      redraw();
+    };
+    grid.appendChild(btn);
+  });
+  document.getElementById("tpl-hint").textContent="💡 "+TEMPLATES.find(t=>t.id===state.tpl).hint;
+}
+
+function buildCatSelect() {
+  const sel=document.getElementById("cat-select");
+  CATS.forEach(c=>{const o=document.createElement("option");o.textContent=c;sel.appendChild(o);});
+}
+
+function buildListRows() {
+  const c=document.getElementById("list-rows"); c.innerHTML="";
+  state.listItems.forEach((item,idx)=>{
+    const div=document.createElement("div");div.className="list-row";
+    div.innerHTML=`<div class="list-num">#${idx+1}</div>
+      <input type="text" value="${item.title}" placeholder="장소명" style="margin-bottom:6px" data-idx="${idx}" data-field="title">
+      <input type="text" value="${item.desc}" placeholder="한 줄 설명" data-idx="${idx}" data-field="desc">`;
+    div.querySelectorAll("input").forEach(inp=>{inp.oninput=e=>{state.listItems[+e.target.dataset.idx][e.target.dataset.field]=e.target.value;redraw();};});
+    c.appendChild(div);
+  });
+}
+
+function buildTags() {
+  const wrap=document.getElementById("tags-wrap"); wrap.innerHTML="";
+  TAGS.forEach(tag=>{
+    const span=document.createElement("span");span.className="tag";span.textContent="#"+tag;
+    span.onclick=()=>{navigator.clipboard.writeText("#"+tag);span.classList.add("copied");setTimeout(()=>span.classList.remove("copied"),1500);};
+    wrap.appendChild(span);
+  });
+}
+function copyAllTags(){
+  navigator.clipboard.writeText(TAGS.map(t=>"#"+t).join(" "));
+  const btn=document.getElementById("copy-all-btn");btn.textContent="✅ 복사됨";setTimeout(()=>btn.textContent="전체 복사",2000);
+}
+
+function downloadPin() {
+  const hl=document.getElementById("hl-input").value||"pin";
+  const slug=hl.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,30);
+  const a=document.createElement("a");a.download=`herinian-${slug}.png`;a.href=canvas.toDataURL("image/png");a.click();
+}
+
+/* ═══════════ INIT ═══════════ */
+buildLayoutPicker(); buildSlotsUI(); buildTplGrid(); buildCatSelect(); buildListRows(); buildTags(); redraw();
+
+// Show install hint on first visit
+if (!localStorage.getItem('pwa_hint_shown')) {
+  setTimeout(()=>{
+    document.getElementById('install-hint').style.display='block';
+    localStorage.setItem('pwa_hint_shown','1');
+  }, 1500);
+}
+</script>
+</body>
+</html>
